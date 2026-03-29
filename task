@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Task Planner</title>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<style>
+:root {
+  --accent: #38bdf8;
+  --green: #22c55e;
+  --text: #e5e7eb;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  color: var(--text);
+  background: url("file:///C:/Users/siddh/Downloads/download%20(1).jpg") no-repeat center/cover;
+}
+
+/* overlay for readability */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+}
+
+/* MENU BUTTON */
+#menuBtn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  font-size: 26px;
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 5;
+}
+
+/* SIDEBAR */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100%;
+
+  transform: translateX(-100%);
+  transition: 0.3s;
+
+  background: rgba(20,20,30,0.4);
+  backdrop-filter: blur(15px);
+  border-right: 1px solid rgba(255,255,255,0.1);
+
+  padding: 20px;
+  z-index: 4;
+}
+
+.sidebar.active {
+  transform: translateX(0);
+}
+
+.sidebar h2 {
+  color: #6ee7ff;
+  margin-bottom: 30px;
+}
+
+.sidebar button {
+  width: 100%;
+  background: none;
+  border: none;
+  color: white;
+  text-align: left;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.sidebar button:hover,
+.sidebar button.active {
+  background: rgba(255,255,255,0.1);
+}
+
+/* OVERLAY */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.3s;
+  z-index: 3;
+}
+
+#overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  padding: 25px;
+  margin-left: 0;
+  overflow-y: auto;
+  z-index: 2;
+}
+
+/* CARDS (GREEN GLASS) */
+.card {
+  background: rgba(34,197,94,0.12);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(34,197,94,0.25);
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(34,197,94,0.2);
+}
+
+.section { display: none; }
+.section.active { display: block; }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: 15px;
+}
+
+.stat h1 {
+  font-size: 32px;
+  color: var(--accent);
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin: 10px 0;
+}
+
+button.primary {
+  padding: 8px 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: black;
+}
+
+/* TASK */
+.task {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.2);
+}
+
+.task.done {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.streak {
+  font-size: 60px;
+  text-align: center;
+  color: #facc15;
+}
+</style>
+</head>
+
+<body>
+
+<button id="menuBtn">☰</button>
+<div id="overlay"></div>
+
+<div id="sidebar" class="sidebar">
+  <h2>TaskPlanner</h2>
+  <button onclick="show('dashboard')" class="active">Dashboard</button>
+  <button onclick="show('tasks')">Tasks</button>
+  <button onclick="show('calendar')">Calendar</button>
+  <button onclick="show('streak')">Streak</button>
+  <button onclick="show('profile')">Profile</button>
+</div>
+
+<div class="main">
+
+<div id="dashboard" class="section active">
+  <div class="stats">
+    <div class="card stat">
+      <h1 id="totalTasks">0</h1>
+      <p>Total Tasks</p>
+    </div>
+    <div class="card stat">
+      <h1 id="doneTasks">0</h1>
+      <p>Completed</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Insights</h3>
+    <p id="insightText">You're doing great 🚀</p>
+  </div>
+</div>
+
+<div id="tasks" class="section">
+  <div class="card">
+    <h3>Add Task</h3>
+    <input id="taskInput" placeholder="Enter task">
+    <input type="date" id="deadlineInput">
+    <button class="primary" onclick="addTask()">Add</button>
+  </div>
+  <div id="taskList"></div>
+</div>
+
+<div id="calendar" class="section">
+  <div class="card">
+    <h3>Calendar</h3>
+    <div id="calendarView"></div>
+  </div>
+</div>
+
+<div id="streak" class="section">
+  <div class="card">
+    <h3>🔥 Streak</h3>
+    <div class="streak" id="streakDisplay">0</div>
+  </div>
+</div>
+
+<div id="profile" class="section">
+  <div class="card">
+    <h3>Arpita</h3>
+    <p>Productivity Mode 🚀</p>
+  </div>
+</div>
+
+</div>
+
+<script>
+const btn = document.getElementById("menuBtn");
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+
+btn.onclick = () => {
+  sidebar.classList.toggle("active");
+  overlay.classList.toggle("active");
+};
+
+overlay.onclick = () => {
+  sidebar.classList.remove("active");
+  overlay.classList.remove("active");
+};
+
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let streak = parseInt(localStorage.getItem("streak")) || 0;
+let lastCompletedDate = localStorage.getItem("lastCompletedDate");
+
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function addTask() {
+  const text = document.getElementById("taskInput").value;
+  const deadline = document.getElementById("deadlineInput").value;
+
+  if (!text) return;
+
+  const priority = prompt("low / medium / high") || "low";
+
+  tasks.push({ text, deadline, done:false, priority });
+  save();
+}
+
+function toggleTask(i) {
+  tasks[i].done = !tasks[i].done;
+
+  if (tasks[i].done) {
+    const today = new Date().toDateString();
+
+    if (lastCompletedDate !== today) {
+      const y = new Date();
+      y.setDate(y.getDate()-1);
+
+      streak = (lastCompletedDate === y.toDateString()) ? streak+1 : 1;
+      lastCompletedDate = today;
+
+      localStorage.setItem("streak", streak);
+      localStorage.setItem("lastCompletedDate", today);
+    }
+  }
+
+  save();
+}
+
+function save() {
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+  render();
+}
+
+function render() {
+  const list = document.getElementById("taskList");
+  list.innerHTML = "";
+
+  tasks.forEach((t,i)=>{
+    const div = document.createElement("div");
+    div.className = "task card" + (t.done ? " done":"");
+
+    const color = t.priority==="high"?"#ef4444":t.priority==="medium"?"#facc15":"#22c55e";
+    div.style.borderLeft = "5px solid "+color;
+
+    div.innerHTML = `
+      <span>${t.text} ${t.deadline?`(${t.deadline})`:""}</span>
+      <button class="primary" onclick="toggleTask(${i})">✔</button>
+    `;
+
+    list.appendChild(div);
+  });
+
+  document.getElementById("totalTasks").innerText = tasks.length;
+  document.getElementById("doneTasks").innerText = tasks.filter(t=>t.done).length;
+  document.getElementById("streakDisplay").innerText = streak;
+
+  document.getElementById("insightText").innerText =
+    tasks.length===0 ? "Start adding tasks ✍️" :
+    tasks.filter(t=>!t.done).length>5 ? "Too many pending ⚠️" :
+    streak>3 ? "🔥 On fire!" :
+    "You're doing great 🚀";
+
+  updateCalendar();
+}
+
+let calendar;
+
+function initCalendar() {
+  calendar = new FullCalendar.Calendar(document.getElementById("calendarView"), {
+    initialView: "dayGridMonth"
+  });
+  calendar.render();
+}
+
+function updateCalendar() {
+  if (!calendar) return;
+  calendar.removeAllEvents();
+
+  tasks.filter(t=>t.deadline).forEach(t=>{
+    calendar.addEvent({
+      title: t.text,
+      date: t.deadline,
+      color: t.done ? "#22c55e" : "#38bdf8"
+    });
+  });
+}
+
+initCalendar();
+render();
+</script>
+
+</body>
+</html>
